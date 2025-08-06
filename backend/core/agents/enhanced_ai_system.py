@@ -19,10 +19,10 @@ class OpenRouterAI:
     
     def __init__(self):
         """Initialize OpenRouter AI with Qwen3 Coder model."""
-        # Get API key from environment or use the provided Qwen Turbo key
-        self.api_key = os.getenv("OPENROUTER_API_KEY", "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")
-        # Use the original Qwen model that was working
-        self.model = "qwen/qwen3-coder:free"
+        # Get API key from environment
+        self.api_key = os.getenv("OPENROUTER_API_KEY", "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")
+        # Use only the free Qwen3 Coder 7B model - proven to work well
+        self.model = "qwen/qwen3-coder:7b"
         self.base_url = "https://openrouter.ai/api/v1"
         
         if self.api_key:
@@ -33,72 +33,58 @@ class OpenRouterAI:
             log.warning("🔧 Set OPENROUTER_API_KEY environment variable to enable real AI")
     
     async def generate_response(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        """Generate response using OpenRouter API directly with fallback models."""
+        """Generate response using OpenRouter API with Qwen3 Coder 7B model."""
         if not self.api_key:
             log.warning("⚠️ No OpenRouter API key provided")
             return None
         
-        # Try different Qwen models in order of preference (only valid models)
-        qwen_models = [
-            "qwen/qwen3-coder:7b",
-            "qwen/qwen3-coder:14b",
-            "qwen/qwen3-coder:32b",
-            "qwen/qwen2.5-7b-instruct",
-            "qwen/qwen2.5-14b-instruct"
-        ]
-        
-        for model in qwen_models:
-            try:
-                log.info(f"🤖 Trying OpenRouter API with model: {model}")
-                log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
+        try:
+            log.info(f"🤖 Using OpenRouter API with model: {self.model}")
+            log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
+            
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": self.model,
+                        "messages": messages,
+                        "temperature": 0.7,
+                        "max_tokens": 1000
+                    }
+                )
                 
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    response = await client.post(
-                        f"{self.base_url}/chat/completions",
-                        headers={
-                            "Authorization": f"Bearer {self.api_key}",
-                            "Content-Type": "application/json"
-                        },
-                        json={
-                            "model": model,
-                            "messages": messages,
-                            "temperature": 0.7,
-                            "max_tokens": 1000
-                        }
-                    )
+                log.info(f"📡 OpenRouter response status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    ai_response = result["choices"][0]["message"]["content"]
+                    log.info(f"✅ OpenRouter response generated successfully with {self.model}")
+                    return ai_response
+                elif response.status_code == 429:
+                    log.warning(f"⚠️ Rate limited for {self.model}")
+                    log.warning("💡 Please wait before making more requests")
+                    return None
+                else:
+                    log.error(f"❌ OpenRouter API error: {response.status_code}")
+                    if "User not found" in response.text:
+                        log.error("🔑 API Key issue: User account not found or suspended")
+                        log.error("💡 Please get a new API key from https://openrouter.ai/keys")
+                    elif "quota" in response.text.lower():
+                        log.error("💰 API Key issue: No credits remaining")
+                        log.error("💡 Please add credits to your OpenRouter account")
+                    elif "rate limit" in response.text.lower():
+                        log.error("⏱️ API Key issue: Rate limited")
+                        log.error("💡 Please wait before making more requests")
+                    log.error(f"❌ Response body: {response.text}")
+                    return None
                     
-                    log.info(f"📡 OpenRouter response status: {response.status_code}")
-                    
-                    if response.status_code == 200:
-                        result = response.json()
-                        ai_response = result["choices"][0]["message"]["content"]
-                        log.info(f"✅ OpenRouter response generated successfully with {model}")
-                        # Update the current model to the successful one
-                        self.model = model
-                        return ai_response
-                    elif response.status_code == 429:
-                        log.warning(f"⚠️ Rate limited for {model}, trying next model...")
-                        continue
-                    else:
-                        log.error(f"❌ OpenRouter API error: {response.status_code}")
-                        if "User not found" in response.text:
-                            log.error("🔑 API Key issue: User account not found or suspended")
-                            log.error("💡 Please get a new API key from https://openrouter.ai/keys")
-                        elif "quota" in response.text.lower():
-                            log.error("💰 API Key issue: No credits remaining")
-                            log.error("💡 Please add credits to your OpenRouter account")
-                        elif "rate limit" in response.text.lower():
-                            log.error("⏱️ API Key issue: Rate limited")
-                            log.error("💡 Please wait before making more requests")
-                        log.error(f"❌ Response body: {response.text}")
-                        continue
-                        
-            except Exception as e:
-                log.error(f"❌ Failed to call OpenRouter API with {model}: {e}")
-                continue
-        
-        log.error("❌ All Qwen models failed or were rate limited")
-        return None
+        except Exception as e:
+            log.error(f"❌ Failed to call OpenRouter API with {self.model}: {e}")
+            return None
 
 class EnhancedAISystem:
     """Enhanced AI system using OpenRouter with Qwen3 Coder."""

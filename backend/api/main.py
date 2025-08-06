@@ -319,7 +319,7 @@ async def chat_endpoint(request: ChatRequest):
         return {
             "response": response,
             "timestamp": asyncio.get_event_loop().time(),
-            "ai_model": "qwen/qwen3-coder:free"
+            "ai_model": "qwen/qwen3-coder:7b"
         }
     except Exception as e:
         log.error(f"Chat request failed: {e}")
