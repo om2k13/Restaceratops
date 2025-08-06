@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosResponse } from 'axios';
 
 const API_BASE_URL = import.meta.env.PROD 
-  ? import.meta.env.VITE_REACT_APP_API_BASE_URL || 'https://restaceratops.onrender.com'
+  ? import.meta.env.VITE_API_BASE_URL || 'https://restaceratops.onrender.com'
   : 'http://localhost:8000';
 
 export interface ChatMessage {
