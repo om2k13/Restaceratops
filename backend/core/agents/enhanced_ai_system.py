@@ -1,29 +1,36 @@
 #!/usr/bin/env python3
 """
 🦖 Enhanced AI System for Restaceratops
-Simplified AI system using OpenRouter with Qwen3 Coder model
+Uses OpenRouter with Qwen3 30B A3B model for intelligent API testing assistance
 """
 
 import os
 import json
 import logging
-from typing import List, Dict, Optional, Any, Tuple
-from datetime import datetime
 import asyncio
-import httpx
+from typing import List, Dict, Optional, Any
+from openai import OpenAI
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("agent.enhanced_ai_system")
 
 class OpenRouterAI:
-    """OpenRouter AI provider using Qwen3 Coder model."""
+    """OpenRouter AI provider using Qwen3 30B A3B model."""
     
     def __init__(self):
-        """Initialize OpenRouter AI with Qwen3 Coder model."""
+        """Initialize OpenRouter AI with Qwen3 30B A3B model."""
         # Get API key from environment
         self.api_key = os.getenv("OPENROUTER_API_KEY", "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")
-        # Use only the free Qwen3 Coder 7B model - proven to work well
-        self.model = "qwen/qwen3-coder:7b"
+        # Use Qwen3 30B A3B model - free tier
+        self.model = "qwen/qwen3-30b-a3b:free"
         self.base_url = "https://openrouter.ai/api/v1"
+        
+        # Initialize OpenAI client for OpenRouter
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key,
+        )
         
         if self.api_key:
             log.info(f"✅ OpenRouter AI configured with {self.model}")
@@ -33,7 +40,7 @@ class OpenRouterAI:
             log.warning("🔧 Set OPENROUTER_API_KEY environment variable to enable real AI")
     
     async def generate_response(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        """Generate response using OpenRouter API with Qwen3 Coder 7B model."""
+        """Generate response using OpenRouter API with Qwen3 30B A3B model."""
         if not self.api_key:
             log.warning("⚠️ No OpenRouter API key provided")
             return None
@@ -42,189 +49,93 @@ class OpenRouterAI:
             log.info(f"🤖 Using OpenRouter API with model: {self.model}")
             log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
             
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": self.model,
-                        "messages": messages,
-                        "temperature": 0.7,
-                        "max_tokens": 1000
-                    }
-                )
-                
-                log.info(f"📡 OpenRouter response status: {response.status_code}")
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    ai_response = result["choices"][0]["message"]["content"]
-                    log.info(f"✅ OpenRouter response generated successfully with {self.model}")
-                    return ai_response
-                elif response.status_code == 429:
-                    log.warning(f"⚠️ Rate limited for {self.model}")
-                    log.warning("💡 Please wait before making more requests")
-                    return None
-                else:
-                    log.error(f"❌ OpenRouter API error: {response.status_code}")
-                    if "User not found" in response.text:
-                        log.error("🔑 API Key issue: User account not found or suspended")
-                        log.error("💡 Please get a new API key from https://openrouter.ai/keys")
-                    elif "quota" in response.text.lower():
-                        log.error("💰 API Key issue: No credits remaining")
-                        log.error("💡 Please add credits to your OpenRouter account")
-                    elif "rate limit" in response.text.lower():
-                        log.error("⏱️ API Key issue: Rate limited")
-                        log.error("💡 Please wait before making more requests")
-                    log.error(f"❌ Response body: {response.text}")
-                    return None
+            # Use the new OpenAI SDK approach
+            completion = self.client.chat.completions.create(
+                extra_headers={
+                    "HTTP-Referer": "https://restaceratops.onrender.com",
+                    "X-Title": "Restaceratops API Testing Platform",
+                },
+                extra_body={},
+                model=self.model,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=1000
+            )
+            
+            ai_response = completion.choices[0].message.content
+            log.info(f"✅ OpenRouter response generated successfully with {self.model}")
+            return ai_response
                     
         except Exception as e:
             log.error(f"❌ Failed to call OpenRouter API with {self.model}: {e}")
             return None
 
 class EnhancedAISystem:
-    """Enhanced AI system using OpenRouter with Qwen3 Coder."""
+    """Enhanced AI system for API testing assistance."""
     
     def __init__(self):
         """Initialize the enhanced AI system."""
         self.openrouter_ai = OpenRouterAI()
         self.conversation_history = []
-        
-        log.info("Enhanced AI system initialized with OpenRouter Qwen3 Coder")
+        log.info("Enhanced AI system initialized with OpenRouter Qwen3 30B A3B")
     
     async def handle_conversation(self, user_input: str) -> str:
-        """Handle user conversation using OpenRouter Qwen3 Coder with proper AI integration."""
+        """Handle user conversation with intelligent responses."""
         try:
-            # Always try to use real AI first for most requests
-            user_input_lower = user_input.lower().strip()
+            # Add user input to conversation history
+            self.conversation_history.append({"role": "user", "content": user_input})
             
-            # Only use template responses for very specific cases
-            greeting_keywords = ['hi', 'hello', 'hey', 'how are you', 'how r u', 'how do you do', 'good morning', 'good afternoon', 'good evening', 'sup', 'whats up']
-            if any(greeting in user_input_lower for greeting in greeting_keywords):
-                # Check if it's a simple greeting without test-related content
-                if not any(test_keyword in user_input_lower for test_keyword in ['status', 'response', 'failed', 'error', 'ms', 'code', 'http', 'api', 'get', 'post', 'url']):
-                    return self._get_greeting_response()
+            # Try to get response from OpenRouter AI
+            if self.openrouter_ai.api_key:
+                response = await self.openrouter_ai.generate_response(self.conversation_history)
+                if response:
+                    # Add AI response to conversation history
+                    self.conversation_history.append({"role": "assistant", "content": response})
+                    return response
             
-            # Create comprehensive system prompt for Qwen3
-            system_prompt = """You are Restaceratops, an advanced AI-powered API testing assistant built with the Qwen3 Coder model. Your core purpose is to provide expert-level guidance for API testing and development.
-
-## Your Capabilities:
-1. **API Testing Strategy**: Design comprehensive testing strategies for REST APIs, GraphQL, and microservices
-2. **Test Case Generation**: Create detailed test cases including positive, negative, edge cases, and performance tests
-3. **Code Generation**: Generate YAML test specifications, Python test scripts, and automation code
-4. **Debugging & Analysis**: Analyze API responses, error codes, and provide troubleshooting guidance
-5. **Performance Testing**: Guide users on load testing, stress testing, and performance optimization
-6. **Security Testing**: Provide guidance on authentication, authorization, and security testing
-7. **Best Practices**: Share industry best practices for API testing and quality assurance
-
-## Your Response Style:
-- Be professional yet approachable
-- Provide actionable, practical advice
-- Include code examples when relevant
-- Use markdown formatting for clarity
-- Focus specifically on API testing context
-- Ask clarifying questions when needed
-
-## Current Context:
-You're integrated into the Restaceratops platform, which provides:
-- Real-time test execution
-- MongoDB data persistence
-- Dashboard analytics
-- File upload capabilities
-- Report generation
-
-Remember: You're helping users build robust, reliable APIs through comprehensive testing."""
-            
-            # Build messages array for Qwen3
-            messages = [
-                {"role": "system", "content": system_prompt}
-            ]
-            
-            # Add conversation history (last 4 messages for context)
-            for msg in self.conversation_history[-4:]:
-                messages.append(msg)
-            
-            # Add current user input
-            messages.append({"role": "user", "content": user_input})
-            
-            # Get response from Qwen3
-            ai_response = await self.openrouter_ai.generate_response(messages)
-            
-            if ai_response:
-                # Update conversation history
-                self.conversation_history.append({"role": "user", "content": user_input})
-                self.conversation_history.append({"role": "assistant", "content": ai_response})
-                
-                # Keep only last 10 messages to prevent memory issues
-                if len(self.conversation_history) > 10:
-                    self.conversation_history = self.conversation_history[-10:]
-                
-                return ai_response
-            else:
-                # Fallback to intelligent response
-                return self._get_intelligent_fallback_response(user_input)
+            # Fallback to intelligent responses if AI fails
+            return self._get_intelligent_fallback_response(user_input)
             
         except Exception as e:
-            log.error(f"Error in conversation: {e}")
+            log.error(f"Error in conversation handling: {e}")
             return self._get_intelligent_fallback_response(user_input)
     
     async def generate_intelligent_tests(self, api_spec: str, requirements: str) -> str:
-        """Generate intelligent test cases using OpenRouter Qwen3 Coder."""
+        """Generate intelligent test cases using AI."""
         try:
-            # Create comprehensive test generation prompt
-            system_prompt = """You are an expert API testing engineer using the Qwen3 Coder model. Your task is to generate comprehensive, production-ready test cases for REST APIs.
-
-## Test Generation Guidelines:
-1. **Coverage**: Include positive, negative, edge cases, and error scenarios
-2. **Format**: Generate valid YAML test specifications
-3. **Realism**: Use realistic test data and scenarios
-4. **Best Practices**: Follow API testing best practices
-5. **Documentation**: Include clear descriptions for each test
-
-## Output Format:
-- Valid YAML structure
-- Clear test names and descriptions
-- Proper request/response expectations
-- Error handling scenarios
-- Performance considerations where relevant"""
-
-            user_prompt = f"""Generate comprehensive API test cases for the following specification:
-
-**API Specification:**
-{api_spec}
-
-**Requirements:**
-{requirements}
-
-**Expected Output:**
-- Valid YAML test specification
-- Multiple test scenarios (positive, negative, edge cases)
-- Clear assertions and expectations
-- Error handling tests
-- Performance considerations
-
-Please provide a complete, ready-to-use test suite."""
-
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-
-            log.info("🤖 Generating test cases with Qwen3 Coder...")
-            ai_response = await self.openrouter_ai.generate_response(messages)
+            prompt = f"""
+            Generate comprehensive API test cases for the following API specification:
             
-            if ai_response:
-                log.info("✅ Test cases generated successfully")
-                return ai_response
-            else:
-                return self._get_fallback_test_template(api_spec)
+            API Specification:
+            {api_spec}
+            
+            Requirements:
+            {requirements}
+            
+            Please provide:
+            1. Test cases for all endpoints
+            2. Positive and negative test scenarios
+            3. Authentication tests
+            4. Error handling tests
+            5. Performance considerations
+            
+            Format the response as YAML test specifications.
+            """
+            
+            messages = [
+                {"role": "system", "content": "You are an expert API testing specialist. Generate comprehensive test cases in YAML format."},
+                {"role": "user", "content": prompt}
+            ]
+            
+            if self.openrouter_ai.api_key:
+                response = await self.openrouter_ai.generate_response(messages)
+                if response:
+                    return response
+            
+            return self._get_fallback_test_template(api_spec)
             
         except Exception as e:
-            log.error(f"Error generating tests: {e}")
+            log.error(f"Error generating intelligent tests: {e}")
             return self._get_fallback_test_template(api_spec)
     
     def get_system_stats(self) -> Dict[str, Any]:
@@ -237,334 +148,428 @@ Please provide a complete, ready-to-use test suite."""
         }
     
     def _get_greeting_response(self) -> str:
-        """Provide friendly greeting responses."""
+        """Get a greeting response."""
         return """🦖 Hello! I'm Restaceratops, your AI-powered API testing assistant.
 
 I can help you with:
 ✅ API testing strategies and best practices
-✅ Test case generation and automation
-✅ Debugging API issues and errors
-✅ Performance testing and optimization
-✅ Security testing guidance
-✅ Code generation for test scripts
+✅ Test case generation and optimization
+✅ Performance testing and monitoring
+✅ Security testing recommendations
+✅ Debugging and troubleshooting
+✅ Test automation and CI/CD integration
 
-How can I assist you with API testing today?"""
-
+What would you like to work on today?"""
+    
     def _get_intelligent_fallback_response(self, user_input: str) -> str:
-        """Get intelligent fallback response using logic-based analysis."""
+        """Get intelligent fallback response based on user input."""
         user_input_lower = user_input.lower()
         
-        # Check for test results patterns first (highest priority)
-        if any(pattern in user_input for pattern in ['Test Results Summary', 'Status: completed', 'Success Rate:', 'Failed Tests:', 'All Results:', 'Expected status', 'got 401', 'got 403', 'got 404', 'got 500']):
-            return self._analyze_test_results(user_input)
-        
-        # Check for greetings and casual conversation (second priority)
-        greeting_keywords = ['hi', 'hello', 'hey', 'how are you', 'how r u', 'how do you do', 'good morning', 'good afternoon', 'good evening', 'sup', 'whats up']
-        if any(greeting in user_input_lower for greeting in greeting_keywords):
+        # Greeting detection
+        if any(word in user_input_lower for word in ["hello", "hi", "hey", "greetings"]):
             return self._get_greeting_response()
         
-        # Analyze user input and provide intelligent responses
-        elif "authentication" in user_input_lower or "auth" in user_input_lower:
+        # Authentication related
+        if any(word in user_input_lower for word in ["auth", "authentication", "login", "token", "bearer", "api key"]):
             return self._get_authentication_guidance(user_input)
-        elif "test" in user_input_lower and "api" in user_input_lower:
+        
+        # API testing related
+        if any(word in user_input_lower for word in ["test", "testing", "api", "endpoint", "request", "response"]):
             return self._get_api_testing_guidance(user_input)
-        elif "error" in user_input_lower or "debug" in user_input_lower or "debbug" in user_input_lower:
+        
+        # Debugging related
+        if any(word in user_input_lower for word in ["debug", "error", "fail", "issue", "problem", "fix"]):
             return self._get_debugging_guidance(user_input)
-        elif "performance" in user_input_lower or "speed" in user_input_lower:
+        
+        # Performance related
+        if any(word in user_input_lower for word in ["performance", "speed", "slow", "timeout", "load"]):
             return self._get_performance_guidance(user_input)
-        elif "security" in user_input_lower:
+        
+        # Security related
+        if any(word in user_input_lower for word in ["security", "secure", "vulnerability", "attack", "penetration"]):
             return self._get_security_guidance(user_input)
-        elif "generate" in user_input_lower and "test" in user_input_lower:
+        
+        # Test generation related
+        if any(word in user_input_lower for word in ["generate", "create", "write", "make", "build"]):
             return self._get_test_generation_guidance(user_input)
-        else:
-            return self._get_general_api_guidance(user_input)
+        
+        # Results analysis
+        if any(word in user_input_lower for word in ["result", "report", "analysis", "summary", "statistics"]):
+            return self._get_analyze_test_results(user_input)
+        
+        # General API guidance
+        return self._get_general_api_guidance(user_input)
     
     def _get_authentication_guidance(self, user_input: str) -> str:
         """Provide authentication testing guidance."""
-        return f"""🔐 **Authentication Testing Guidance**
+        return """🔐 **Authentication Testing Best Practices**
 
-Based on your question: "{user_input}"
+Based on your question about authentication, here are key testing strategies:
 
-**Essential Authentication Tests:**
-1. **Valid Credentials Test**
-   - Test with correct username/password
-   - Verify 200 OK response
-   - Check for valid JWT/token in response
-
-2. **Invalid Credentials Test**
-   - Test with wrong username/password
-   - Verify 401 Unauthorized response
-   - Check error message clarity
-
-3. **Missing Credentials Test**
-   - Test without authentication headers
-   - Verify 401 Unauthorized response
-
-4. **Token Expiration Test**
-   - Test with expired tokens
-   - Verify 401 Unauthorized response
-
-5. **Role-Based Access Test**
-   - Test different user roles
-   - Verify appropriate access levels
-
-**Sample Test Cases:**
+**1. Token-Based Authentication**
 ```yaml
-- name: "Valid Authentication"
+- name: "Test Valid Bearer Token"
   request:
-    method: POST
-    url: "/api/auth/login"
-    json:
-      username: "testuser"
-      password: "testpass"
+    method: GET
+    url: "/api/protected"
+    headers:
+      Authorization: "Bearer {valid_token}"
   expect:
     status: 200
-    json:
-      token: "{{token}}"
 
-- name: "Invalid Authentication"
+- name: "Test Invalid Token"
   request:
-    method: POST
-    url: "/api/auth/login"
-    json:
-      username: "wronguser"
-      password: "wrongpass"
+    method: GET
+    url: "/api/protected"
+    headers:
+      Authorization: "Bearer invalid_token"
   expect:
     status: 401
 ```
 
-Would you like me to help you create specific authentication test cases for your API?"""
+**2. API Key Authentication**
+```yaml
+- name: "Test Valid API Key"
+  request:
+    method: GET
+    url: "/api/data"
+    headers:
+      X-API-Key: "{valid_api_key}"
+  expect:
+    status: 200
+
+- name: "Test Missing API Key"
+  request:
+    method: GET
+    url: "/api/data"
+  expect:
+    status: 401
+```
+
+**3. OAuth2 Testing**
+- Test authorization code flow
+- Test refresh token rotation
+- Test token expiration
+- Test scope validation
+
+**4. Security Considerations**
+- Test for token leakage in logs
+- Verify HTTPS enforcement
+- Test rate limiting on auth endpoints
+- Validate token format and strength
+
+Need help implementing specific authentication tests?"""
     
     def _get_api_testing_guidance(self, user_input: str) -> str:
         """Provide API testing guidance."""
-        return f"""🧪 **API Testing Best Practices**
+        return """🧪 **Comprehensive API Testing Strategy**
 
-Based on your question: "{user_input}"
+Here's a complete approach to API testing:
 
-**Comprehensive API Testing Strategy:**
-
-1. **Functional Testing**
-   - Test all endpoints and methods
-   - Verify correct responses
-   - Test edge cases and boundaries
-
-2. **Data Validation Testing**
-   - Test with valid data
-   - Test with invalid data
-   - Test with missing required fields
-
-3. **Error Handling Testing**
-   - Test 4xx error responses
-   - Test 5xx error responses
-   - Verify meaningful error messages
-
-4. **Performance Testing**
-   - Test response times
-   - Test under load
-   - Monitor resource usage
-
-**Sample Test Structure:**
+**1. Functional Testing**
 ```yaml
-- name: "GET User Profile"
+- name: "GET Resource"
   request:
     method: GET
-    url: "/api/users/123"
-    headers:
-      Authorization: "Bearer {{token}}"
+    url: "/api/resources/123"
   expect:
     status: 200
     json:
       id: 123
-      name: "{{string}}"
+      name: "string"
 
-- name: "Create User"
+- name: "POST Create Resource"
   request:
     method: POST
-    url: "/api/users"
+    url: "/api/resources"
     json:
-      name: "New User"
-      email: "user@example.com"
+      name: "New Resource"
+      description: "Test resource"
   expect:
     status: 201
     json:
-      id: "{{number}}"
+      id: "number"
+      name: "New Resource"
 ```
 
-**Testing Tools Recommendation:**
-- Use Restaceratops for automated testing
-- Monitor with real-time dashboards
-- Generate comprehensive reports
+**2. Data Validation Testing**
+- Test with valid data
+- Test with invalid data types
+- Test with missing required fields
+- Test with boundary values
+- Test with special characters
 
-Need help setting up specific test cases?"""
+**3. Error Handling Testing**
+```yaml
+- name: "Test 400 Bad Request"
+  request:
+    method: POST
+    url: "/api/resources"
+    json: {}
+  expect:
+    status: 400
+
+- name: "Test 404 Not Found"
+  request:
+    method: GET
+    url: "/api/resources/999999"
+  expect:
+    status: 404
+```
+
+**4. Performance Testing**
+- Response time under normal load
+- Response time under high load
+- Concurrent request handling
+- Memory usage monitoring
+
+**5. Security Testing**
+- Input validation
+- SQL injection prevention
+- XSS protection
+- CORS configuration
+- Rate limiting
+
+**6. Integration Testing**
+- End-to-end workflows
+- Data consistency
+- State management
+- Error propagation
+
+Would you like me to help you create specific test cases for your API?"""
     
     def _get_debugging_guidance(self, user_input: str) -> str:
-        """Provide debugging guidance for test failures and errors."""
-        
-        # Check if user pasted test results (more comprehensive check)
-        user_input_lower = user_input.lower()
-        test_result_indicators = [
-            'failed', 'error', 'status', 'response', 'ms', 'code', 
-            'expected status', 'got', 'test name', 'response time', 'response code'
-        ]
-        
-        if any(indicator in user_input_lower for indicator in test_result_indicators):
-            return self._analyze_test_results(user_input)
-        
-        return f"""🐛 **API Debugging Guide**
+        """Provide debugging guidance."""
+        return """🔍 **API Debugging Best Practices**
 
-Based on your question: "{user_input}"
+Here's a systematic approach to debugging API issues:
 
-**Systematic Debugging Approach:**
+**1. Request/Response Analysis**
+```bash
+# Use curl with verbose output
+curl -v -X POST https://api.example.com/endpoint \
+  -H "Content-Type: application/json" \
+  -d '{"key": "value"}'
 
-1. **Check Request Details**
-   - Verify HTTP method
-   - Check URL and parameters
-   - Validate request headers
-   - Review request body
+# Check response headers
+curl -I https://api.example.com/endpoint
+```
 
-2. **Analyze Response**
-   - Check status codes
-   - Review response headers
-   - Examine response body
-   - Look for error messages
+**2. Common Issues & Solutions**
 
-3. **Common Issues & Solutions**
-   - **401 Unauthorized**: Check authentication
-   - **400 Bad Request**: Validate request format
-   - **404 Not Found**: Verify endpoint URL
-   - **500 Internal Error**: Check server logs
+**Status Code 400 (Bad Request)**
+- Check request body format
+- Validate required fields
+- Verify content-type header
+- Check data types
 
-4. **Debugging Tools**
-   - Use browser DevTools
-   - Check network tab
-   - Review server logs
-   - Use API testing tools
+**Status Code 401 (Unauthorized)**
+- Verify authentication token
+- Check token expiration
+- Validate API key format
+- Test with valid credentials
 
-**Debugging Checklist:**
+**Status Code 403 (Forbidden)**
+- Check user permissions
+- Verify resource ownership
+- Test with different user roles
+- Check rate limiting
+
+**Status Code 404 (Not Found)**
+- Verify endpoint URL
+- Check resource ID existence
+- Test with valid IDs
+- Check API version
+
+**Status Code 500 (Internal Server Error)**
+- Check server logs
+- Verify database connectivity
+- Test with minimal payload
+- Check external service dependencies
+
+**3. Debugging Tools**
+- **Postman/Insomnia**: GUI testing
+- **curl**: Command line testing
+- **Browser DevTools**: Network analysis
+- **Logs**: Server and application logs
+- **Monitoring**: APM tools
+
+**4. Test Case for Debugging**
 ```yaml
 - name: "Debug Request"
   request:
-    method: "{{method}}"
-    url: "{{url}}"
-    headers: "{{headers}}"
-    body: "{{body}}"
+    method: POST
+    url: "/api/debug"
+    headers:
+      Content-Type: "application/json"
+      X-Debug: "true"
+    json:
+      test_data: "value"
   expect:
-    status: "{{expected_status}}"
-  debug:
-    log_request: true
-    log_response: true
-    validate_schema: true
+    status: 200
+    json:
+      debug_info: "string"
+      request_id: "string"
 ```
 
-**Quick Debug Steps:**
-1. Test with simple tools (curl, Postman)
-2. Check API documentation
-3. Verify authentication
-4. Review error logs
-5. Test with minimal data
+**5. Logging Best Practices**
+- Log request/response details
+- Include correlation IDs
+- Log performance metrics
+- Capture error context
 
-**💡 Pro Tip**: If you have specific test results that failed, paste them here and I'll help you analyze the exact issue!
-
-Need help debugging a specific issue?"""
+What specific issue are you debugging? I can help create targeted test cases."""
     
     def _get_performance_guidance(self, user_input: str) -> str:
         """Provide performance testing guidance."""
-        return f"""⚡ **Performance Testing Guide**
+        return """⚡ **API Performance Testing Guide**
 
-Based on your question: "{user_input}"
+Here's how to test and optimize API performance:
 
-**Performance Testing Strategy:**
-
-1. **Response Time Testing**
-   - Measure individual request times
-   - Set acceptable thresholds
-   - Monitor under different loads
-
-2. **Load Testing**
-   - Test with multiple concurrent users
-   - Identify breaking points
-   - Monitor resource usage
-
-3. **Stress Testing**
-   - Test beyond normal capacity
-   - Identify failure modes
-   - Test recovery mechanisms
-
-**Performance Metrics:**
-- **Response Time**: < 200ms for simple requests
-- **Throughput**: Requests per second
-- **Error Rate**: < 1% under normal load
-- **Resource Usage**: CPU, memory, network
-
-**Sample Performance Test:**
+**1. Response Time Testing**
 ```yaml
-- name: "Performance Test"
+- name: "Performance Test - Response Time"
+  request:
+    method: GET
+    url: "/api/data"
+  expect:
+    status: 200
+    response_time: "< 1000ms"  # Custom assertion
+```
+
+**2. Load Testing Scenarios**
+- **Baseline**: Normal user load
+- **Peak**: Maximum expected load
+- **Stress**: Beyond capacity
+- **Spike**: Sudden traffic increase
+
+**3. Performance Metrics**
+- **Response Time**: P50, P95, P99
+- **Throughput**: Requests per second
+- **Error Rate**: Percentage of failed requests
+- **Resource Usage**: CPU, Memory, Network
+
+**4. Performance Test Cases**
+```yaml
+- name: "Concurrent Users Test"
   request:
     method: GET
     url: "/api/users"
   expect:
     status: 200
     response_time: "< 500ms"
-  performance:
-    concurrent_users: 10
-    duration: "30s"
-    ramp_up: "10s"
+  metadata:
+    concurrent_users: 100
+    duration: "5m"
+
+- name: "Database Query Performance"
+  request:
+    method: GET
+    url: "/api/reports/complex"
+  expect:
+    status: 200
+    response_time: "< 2000ms"
 ```
 
-**Optimization Tips:**
-- Use caching where appropriate
-- Optimize database queries
-- Implement pagination
-- Use CDN for static content
-- Monitor and alert on performance
+**5. Performance Optimization Tips**
+- **Caching**: Implement Redis/Memcached
+- **Database**: Optimize queries, add indexes
+- **CDN**: Use for static content
+- **Compression**: Enable gzip/brotli
+- **Connection Pooling**: Reuse connections
+- **Async Processing**: Use background jobs
 
-Need help setting up performance tests?"""
+**6. Monitoring Setup**
+```yaml
+- name: "Health Check with Performance"
+  request:
+    method: GET
+    url: "/health"
+  expect:
+    status: 200
+    response_time: "< 100ms"
+  metadata:
+    alert_threshold: "500ms"
+```
+
+**7. Common Performance Issues**
+- **N+1 Queries**: Use eager loading
+- **Memory Leaks**: Monitor heap usage
+- **Network Latency**: Use CDN/edge locations
+- **Database Bottlenecks**: Optimize queries
+- **Inefficient Algorithms**: Profile code
+
+**8. Performance Testing Tools**
+- **Artillery**: Load testing
+- **k6**: Performance testing
+- **JMeter**: Apache load testing
+- **Gatling**: Scala-based testing
+- **Restaceratops**: API-specific testing
+
+Need help setting up performance tests for your specific API?"""
     
     def _get_security_guidance(self, user_input: str) -> str:
         """Provide security testing guidance."""
-        return f"""🔒 **Security Testing Guide**
+        return """🔒 **API Security Testing Guide**
 
-Based on your question: "{user_input}"
+Here's a comprehensive security testing approach:
 
-**Security Testing Checklist:**
-
-1. **Authentication Security**
-   - Test password strength requirements
-   - Verify secure token storage
-   - Test session management
-   - Check for brute force protection
-
-2. **Authorization Testing**
-   - Test role-based access control
-   - Verify permission boundaries
-   - Test privilege escalation
-   - Check resource isolation
-
-3. **Input Validation**
-   - Test SQL injection prevention
-   - Test XSS protection
-   - Test file upload security
-   - Validate input sanitization
-
-4. **Data Protection**
-   - Verify HTTPS usage
-   - Check sensitive data encryption
-   - Test data exposure prevention
-   - Verify GDPR compliance
-
-**Security Test Examples:**
+**1. Authentication Testing**
 ```yaml
-- name: "SQL Injection Test"
+- name: "Test Weak Passwords"
   request:
     method: POST
-    url: "/api/search"
+    url: "/api/auth/login"
     json:
-      query: "'; DROP TABLE users; --"
+      username: "admin"
+      password: "password123"
+  expect:
+    status: 401
+
+- name: "Test Brute Force Protection"
+  request:
+    method: POST
+    url: "/api/auth/login"
+    json:
+      username: "admin"
+      password: "wrong_password"
+  expect:
+    status: 429  # Rate limited
+```
+
+**2. Authorization Testing**
+```yaml
+- name: "Test Unauthorized Access"
+  request:
+    method: GET
+    url: "/api/admin/users"
+    headers:
+      Authorization: "Bearer {user_token}"
+  expect:
+    status: 403
+
+- name: "Test Privilege Escalation"
+  request:
+    method: PUT
+    url: "/api/users/123/role"
+    headers:
+      Authorization: "Bearer {user_token}"
+    json:
+      role: "admin"
+  expect:
+    status: 403
+```
+
+**3. Input Validation Testing**
+```yaml
+- name: "Test SQL Injection"
+  request:
+    method: GET
+    url: "/api/users?search=' OR 1=1--"
   expect:
     status: 400
-    not_contains: "error in your SQL syntax"
 
-- name: "XSS Test"
+- name: "Test XSS Prevention"
   request:
     method: POST
     url: "/api/comments"
@@ -572,477 +577,605 @@ Based on your question: "{user_input}"
       content: "<script>alert('xss')</script>"
   expect:
     status: 400
-    not_contains: "<script>"
 ```
 
-**Security Best Practices:**
+**4. Data Exposure Testing**
+```yaml
+- name: "Test Sensitive Data Exposure"
+  request:
+    method: GET
+    url: "/api/users/123"
+  expect:
+    status: 200
+    json:
+      id: 123
+      name: "string"
+      # Should NOT include: password, ssn, credit_card
+```
+
+**5. Security Headers Testing**
+```yaml
+- name: "Test Security Headers"
+  request:
+    method: GET
+    url: "/api/data"
+  expect:
+    status: 200
+    headers:
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "DENY"
+      X-XSS-Protection: "1; mode=block"
+      Strict-Transport-Security: "string"
+```
+
+**6. Common Security Vulnerabilities**
+- **OWASP Top 10**: Check for common vulnerabilities
+- **CORS Misconfiguration**: Test cross-origin requests
+- **JWT Security**: Validate token handling
+- **API Rate Limiting**: Test abuse prevention
+- **Data Encryption**: Verify sensitive data protection
+
+**7. Security Testing Tools**
+- **OWASP ZAP**: Automated security testing
+- **Burp Suite**: Manual security testing
+- **Nmap**: Network security scanning
+- **Nikto**: Web server security scanner
+
+**8. Security Best Practices**
 - Use HTTPS everywhere
 - Implement proper authentication
 - Validate all inputs
-- Use parameterized queries
+- Sanitize outputs
+- Log security events
 - Regular security audits
 
-Need help implementing security tests?"""
+Need help implementing specific security tests?"""
     
     def _get_test_generation_guidance(self, user_input: str) -> str:
         """Provide test generation guidance."""
-        return f"""🎯 **Test Generation Guide**
+        return """🧪 **Intelligent Test Generation Guide**
 
-Based on your question: "{user_input}"
+Here's how to generate comprehensive test cases:
 
-**Automated Test Generation Strategy:**
-
-1. **OpenAPI Specification Analysis**
-   - Parse API documentation
-   - Generate tests for all endpoints
-   - Create positive and negative tests
-   - Include edge cases
-
-2. **Test Categories to Generate**
-   - **Happy Path Tests**: Valid requests
-   - **Error Tests**: Invalid inputs
-   - **Boundary Tests**: Edge cases
-   - **Performance Tests**: Load scenarios
-
-3. **Test Data Generation**
-   - Generate realistic test data
-   - Create varied input scenarios
-   - Include boundary values
-   - Test data validation
-
-**Generated Test Structure:**
+**1. OpenAPI Specification Testing**
 ```yaml
-# Generated from OpenAPI spec
-- name: "GET /api/users - Success"
+# Generate tests from OpenAPI spec
+- name: "Auto-generated from OpenAPI"
+  request:
+    method: "{method}"
+    url: "{base_url}{path}"
+    headers:
+      Content-Type: "application/json"
+    json: "{request_body}"
+  expect:
+    status: "{expected_status}"
+    json: "{expected_response}"
+```
+
+**2. Test Case Templates**
+
+**CRUD Operations**
+```yaml
+- name: "Create Resource"
+  request:
+    method: POST
+    url: "/api/resources"
+    json:
+      name: "Test Resource"
+      description: "Generated test data"
+  expect:
+    status: 201
+    json:
+      id: "number"
+      name: "Test Resource"
+
+- name: "Read Resource"
   request:
     method: GET
-    url: "/api/users"
-    headers:
-      Authorization: "Bearer {{token}}"
+    url: "/api/resources/{id}"
   expect:
     status: 200
-    json_schema:
-      type: array
-      items:
-        type: object
-        properties:
-          id: {type: integer}
-          name: {type: string}
+    json:
+      id: "{id}"
+      name: "string"
 
-- name: "POST /api/users - Invalid Data"
+- name: "Update Resource"
+  request:
+    method: PUT
+    url: "/api/resources/{id}"
+    json:
+      name: "Updated Resource"
+  expect:
+    status: 200
+    json:
+      id: "{id}"
+      name: "Updated Resource"
+
+- name: "Delete Resource"
+  request:
+    method: DELETE
+    url: "/api/resources/{id}"
+  expect:
+    status: 204
+```
+
+**3. Data-Driven Testing**
+```yaml
+- name: "Test with Multiple Data Sets"
   request:
     method: POST
     url: "/api/users"
     json:
-      email: "invalid-email"
+      name: "{name}"
+      email: "{email}"
+      age: "{age}"
+  expect:
+    status: 201
+  data_sets:
+    - name: "John Doe", email: "john@example.com", age: 25
+    - name: "Jane Smith", email: "jane@example.com", age: 30
+    - name: "Bob Wilson", email: "bob@example.com", age: 35
+```
+
+**4. Edge Case Testing**
+```yaml
+- name: "Test Empty Payload"
+  request:
+    method: POST
+    url: "/api/data"
+    json: {}
   expect:
     status: 400
+
+- name: "Test Large Payload"
+  request:
+    method: POST
+    url: "/api/data"
     json:
-      error: "Invalid email format"
+      content: "{large_string}"
+  expect:
+    status: 413  # Payload Too Large
+
+- name: "Test Special Characters"
+  request:
+    method: POST
+    url: "/api/data"
+    json:
+      content: "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+  expect:
+    status: 200
 ```
 
-**Test Generation Tools:**
-- Use Restaceratops AI for intelligent generation
-- Parse OpenAPI/Swagger specifications
-- Generate comprehensive test suites
-- Include assertions and validations
-
-Ready to generate tests for your API?"""
+**5. Workflow Testing**
+```yaml
+- name: "Complete User Registration Flow"
+  steps:
+    - name: "Register User"
+      request:
+        method: POST
+        url: "/api/register"
+        json:
+          email: "test@example.com"
+          password: "secure123"
+      expect:
+        status: 201
+        json:
+          user_id: "number"
     
-    def _analyze_test_results(self, user_input: str) -> str:
-        """Analyze test results and provide specific solutions."""
-        
-        # Extract common patterns from test results
-        lines = user_input.split('\n')
-        status_codes = []
-        errors = []
-        urls = []
-        test_file = ""
-        success_rate = ""
-        
-        for line in lines:
-            line_lower = line.lower()
-            
-            # Extract test file name
-            if 'test file:' in line_lower:
-                test_file = line.split('Test File:')[1].strip() if 'Test File:' in line else ""
-            
-            # Extract success rate
-            if 'success rate:' in line_lower:
-                success_rate = line.split('Success Rate:')[1].strip() if 'Success Rate:' in line else ""
-            
-            # Extract status codes (look for patterns like "403", "500", "got 403", etc.)
-            if any(char.isdigit() for char in line):
-                # Look for status codes in various formats
-                words = line.split()
-                for i, word in enumerate(words):
-                    if word.isdigit() and len(word) == 3:  # Likely HTTP status code
-                        status_codes.append(word)
-                    elif word.lower() == 'got' and i + 1 < len(words) and words[i + 1].isdigit():
-                        status_codes.append(words[i + 1])
-                    elif word.lower() == 'status' and i + 1 < len(words) and words[i + 1].isdigit():
-                        status_codes.append(words[i + 1])
-            
-            # Extract URLs
-            if 'http' in line_lower:
-                urls.extend([word for word in line.split() if 'http' in word])
-            
-            # Extract errors and failed tests
-            if 'error' in line_lower or 'failed' in line_lower:
-                errors.append(line.strip())
-        
-        # Provide specific guidance based on patterns
-        if status_codes:
-            status_analysis = self._analyze_status_codes(status_codes)
-        else:
-            status_analysis = ""
-            
-        if errors:
-            error_analysis = self._analyze_errors(errors)
-        else:
-            error_analysis = ""
-        
-        # Create specific analysis based on the test results
-        analysis_header = f"""🔍 **Test Results Analysis**
+    - name: "Verify Email"
+      request:
+        method: POST
+        url: "/api/verify"
+        json:
+          token: "{verification_token}"
+      expect:
+        status: 200
+    
+    - name: "Login User"
+      request:
+        method: POST
+        url: "/api/login"
+        json:
+          email: "test@example.com"
+          password: "secure123"
+      expect:
+        status: 200
+        json:
+          access_token: "string"
+```
 
-**Test File:** {test_file}
-**Success Rate:** {success_rate}
+**6. Test Generation Best Practices**
+- Cover all HTTP methods
+- Test all status codes
+- Include positive and negative cases
+- Test boundary values
+- Include authentication scenarios
+- Test error conditions
+- Validate response schemas
 
-I've analyzed your test results and found the following issues:
+**7. Automated Test Generation**
+```python
+# Generate tests from API documentation
+def generate_tests_from_spec(openapi_spec):
+    tests = []
+    for path, methods in openapi_spec['paths'].items():
+        for method, details in methods.items():
+            test = create_test_case(path, method, details)
+            tests.append(test)
+    return tests
+```
 
-{status_analysis}
-{error_analysis}"""
-        
-        # Provide specific solutions based on status codes found
-        if '401' in status_codes:
-            return f"""{analysis_header}
+Need help generating specific test cases for your API?"""
+    
+    def _get_analyze_test_results(self, user_input: str) -> str:
+        """Analyze test results and provide insights."""
+        return """📊 **Test Results Analysis Guide**
 
-**🔐 Authentication Issue Detected (401 Unauthorized)**
+Here's how to analyze and interpret your test results:
 
-Your API is returning 401 Unauthorized, which means authentication is required but not provided or invalid.
+**1. Success Rate Analysis**
+```yaml
+# Example test results
+total_tests: 10
+passed_tests: 8
+failed_tests: 2
+success_rate: 80%
 
-**Immediate Solutions:**
+# Analysis
+- High success rate (>90%): Good API health
+- Medium success rate (70-90%): Needs attention
+- Low success rate (<70%): Critical issues
+```
 
-1. **Add Authentication Headers:**
-   ```yaml
-   - name: "Get Users List with Auth"
-     request:
-       method: GET
-       url: "YOUR_API_URL/users"
-       headers:
-         Authorization: "Bearer YOUR_ACCESS_TOKEN"
-         Content-Type: "application/json"
-     expect:
-       status: 200
-   ```
+**2. Response Time Analysis**
+```yaml
+# Performance metrics
+avg_response_time: 450ms
+min_response_time: 120ms
+max_response_time: 1200ms
 
-2. **Check Authentication Method:**
-   - **Bearer Token**: Add `Authorization: Bearer YOUR_TOKEN`
-   - **API Key**: Add `X-API-Key: YOUR_API_KEY`
-   - **Basic Auth**: Add `Authorization: Basic base64(username:password)`
+# Performance categories
+- Excellent: < 200ms
+- Good: 200-500ms
+- Acceptable: 500-1000ms
+- Poor: > 1000ms
+```
 
-3. **Debug Steps:**
-   ```bash
-   # Test with curl to verify authentication
-   curl -X GET "YOUR_API_URL/users" \\
-        -H "Authorization: Bearer YOUR_TOKEN" \\
-        -H "Content-Type: application/json"
-   
-   # Check if endpoint requires authentication
-   curl -I "YOUR_API_URL/users"
-   ```
+**3. Error Pattern Analysis**
+```yaml
+# Common error patterns
+status_codes:
+  400: 5  # Bad Request - Input validation issues
+  401: 2  # Unauthorized - Auth problems
+  404: 3  # Not Found - Routing issues
+  500: 1  # Server Error - Backend issues
+```
 
-4. **Common Authentication Issues:**
-   - Missing or expired access token
-   - Incorrect API key format
-   - Wrong authentication method
-   - Token not included in headers
+**4. Test Result Categories**
 
-**Next Steps:**
-1. Check your API documentation for authentication requirements
-2. Verify your access token is valid and not expired
-3. Test the endpoint manually with curl first
-4. Update your test case with proper authentication headers
+**✅ Passing Tests**
+- Verify expected behavior
+- Check response accuracy
+- Validate performance metrics
+- Confirm data integrity
 
-Would you like me to help you create a specific test case with authentication for your API?"""
-        
-        elif '403' in status_codes:
-            return f"""{analysis_header}
+**❌ Failing Tests**
+- Analyze error messages
+- Check request/response logs
+- Verify test data
+- Test environment issues
 
-**🚫 Authorization Issue Detected (403 Forbidden)**
+**⚠️ Flaky Tests**
+- Inconsistent results
+- Timing dependencies
+- External service issues
+- Race conditions
 
-Your API is returning 403 Forbidden, which means the request is authenticated but the user doesn't have permission.
+**5. Root Cause Analysis**
+```yaml
+# Common failure patterns
+- Authentication failures: Check tokens, permissions
+- Validation errors: Verify input data, schemas
+- Timeout errors: Check performance, network
+- Database errors: Check connections, queries
+- External service failures: Check dependencies
+```
 
-**Solutions:**
+**6. Performance Insights**
+```yaml
+# Response time distribution
+fast_responses: 60%  # < 200ms
+normal_responses: 30%  # 200-500ms
+slow_responses: 10%  # > 500ms
 
-1. **Check User Permissions:**
-   - Verify the authenticated user has the required role
-   - Check if the endpoint requires specific permissions
-   - Test with a user account that has proper access
+# Recommendations
+- Optimize slow endpoints
+- Implement caching
+- Add database indexes
+- Use CDN for static content
+```
 
-2. **Test with Different Users:**
-   ```yaml
-   - name: "Test with Admin User"
-     request:
-       method: GET
-       url: "YOUR_API_URL/users"
-       headers:
-         Authorization: "Bearer ADMIN_TOKEN"
-     expect:
-       status: 200
-   ```
+**7. Security Analysis**
+```yaml
+# Security test results
+authentication_tests: 5/5 passed
+authorization_tests: 4/5 passed
+input_validation_tests: 3/5 passed
+data_exposure_tests: 5/5 passed
 
-3. **Debug Steps:**
-   ```bash
-   # Test with different user tokens
-   curl -X GET "YOUR_API_URL/users" \\
-        -H "Authorization: Bearer ADMIN_TOKEN"
-   ```
+# Security score: 85%
+# Recommendations: Improve input validation
+```
 
-**Next Steps:**
-1. Check user roles and permissions
-2. Test with an admin or privileged user account
-3. Verify the endpoint access requirements
-4. Contact API administrator if needed"""
-        
-        elif '404' in status_codes:
-            return f"""{analysis_header}
+**8. Trend Analysis**
+```yaml
+# Historical comparison
+current_success_rate: 85%
+previous_success_rate: 90%
+trend: Declining
 
-**🔍 Endpoint Not Found (404)**
+# Action items
+- Investigate recent changes
+- Check new deployments
+- Review error logs
+- Update test cases
+```
 
-Your API is returning 404 Not Found, which means the endpoint URL is incorrect.
+**9. Automated Reporting**
+```python
+def generate_test_report(results):
+    report = {
+        "summary": calculate_summary(results),
+        "performance": analyze_performance(results),
+        "errors": categorize_errors(results),
+        "recommendations": generate_recommendations(results)
+    }
+    return report
+```
 
-**Solutions:**
+**10. Action Items Based on Results**
+- **High error rate**: Debug failing tests
+- **Slow performance**: Optimize endpoints
+- **Security issues**: Implement fixes
+- **Flaky tests**: Improve test stability
+- **Missing coverage**: Add more test cases
 
-1. **Verify the URL:**
-   - Check the API documentation for correct endpoints
-   - Ensure the base URL is correct
-   - Verify the endpoint path is accurate
-
-2. **Common URL Issues:**
-   - Wrong base URL (http vs https)
-   - Missing or extra slashes
-   - Incorrect API version in path
-   - Wrong endpoint name
-
-3. **Debug Steps:**
-   ```bash
-   # Test the base URL first
-   curl -I "YOUR_API_BASE_URL"
-   
-   # Test the specific endpoint
-   curl -X GET "YOUR_API_URL/users"
-   ```
-
-**Next Steps:**
-1. Check API documentation for correct endpoints
-2. Verify the base URL and path
-3. Test with a known working endpoint first
-4. Update your test case with the correct URL"""
-        
-        else:
-            return f"""{analysis_header}
-
-**Recommended Solutions:**
-
-1. **Immediate Actions:**
-   - Verify the API endpoint is accessible
-   - Check if authentication is required
-   - Validate request format and headers
-   - Test with a simple tool like curl first
-
-2. **Debugging Steps:**
-   ```bash
-   # Test the endpoint manually
-   curl -X GET "YOUR_API_URL" -H "Content-Type: application/json"
-   
-   # Check response headers
-   curl -I "YOUR_API_URL"
-   
-   # Test with verbose output
-   curl -v "YOUR_API_URL"
-   ```
-
-3. **Common Fixes:**
-   - **401/403**: Add proper authentication headers
-   - **404**: Verify the URL is correct
-   - **400**: Check request body format
-   - **500**: Server issue, check API logs
-
-4. **Test Case Improvements:**
-   ```yaml
-   - name: "Improved Test Case"
-     request:
-       method: GET
-       url: "YOUR_API_URL"
-       headers:
-         Authorization: "Bearer YOUR_TOKEN"
-         Content-Type: "application/json"
-     expect:
-       status: 200
-       timeout: 10000  # 10 seconds
-   ```
-
-**Next Steps:**
-1. Try the manual curl commands above
-2. Check the API documentation
-3. Verify your test environment
-4. Run the improved test case
-
-Would you like me to help you create a specific test case for your API?"""
-
-    def _analyze_status_codes(self, status_codes: list) -> str:
-        """Analyze status codes and provide specific guidance."""
-        analysis = "**Status Code Analysis:**\n"
-        
-        for code in status_codes:
-            if code == '401':
-                analysis += f"- **401 Unauthorized**: Authentication required. Add proper headers.\n"
-            elif code == '403':
-                analysis += f"- **403 Forbidden**: Access denied. Check permissions.\n"
-            elif code == '404':
-                analysis += f"- **404 Not Found**: URL incorrect or endpoint doesn't exist.\n"
-            elif code == '400':
-                analysis += f"- **400 Bad Request**: Invalid request format or missing parameters.\n"
-            elif code == '500':
-                analysis += f"- **500 Internal Server Error**: Server issue. Check API logs.\n"
-            elif code == '502':
-                analysis += f"- **502 Bad Gateway**: Upstream server issue.\n"
-            elif code == '503':
-                analysis += f"- **503 Service Unavailable**: Server temporarily unavailable.\n"
-            else:
-                analysis += f"- **{code}**: Unknown status code. Check API documentation.\n"
-        
-        return analysis
-
-    def _analyze_errors(self, errors: list) -> str:
-        """Analyze error messages and provide guidance."""
-        analysis = "\n**Error Analysis:**\n"
-        
-        for error in errors[:3]:  # Limit to first 3 errors
-            error_lower = error.lower()
-            if 'timeout' in error_lower:
-                analysis += "- **Timeout**: Increase timeout value or check network.\n"
-            elif 'connection' in error_lower:
-                analysis += "- **Connection Error**: Check if API is accessible.\n"
-            elif 'ssl' in error_lower or 'certificate' in error_lower:
-                analysis += "- **SSL Error**: Check certificate or use HTTP for testing.\n"
-            elif 'json' in error_lower:
-                analysis += "- **JSON Error**: Check response format and parsing.\n"
-            else:
-                analysis += f"- **Error**: {error[:100]}...\n"
-        
-        return analysis
-
+Need help analyzing specific test results?"""
+    
     def _get_general_api_guidance(self, user_input: str) -> str:
         """Provide general API guidance."""
-        return f"""🦖 **Restaceratops API Testing Assistant**
+        return """🌐 **General API Testing Best Practices**
 
-Based on your question: "{user_input}"
+Here's a comprehensive guide to API testing:
 
-**How I Can Help You:**
+**1. API Testing Pyramid**
+```
+    /\
+   /  \     E2E Tests (Few)
+  /____\    Integration Tests (Some)
+ /______\   Unit Tests (Many)
+```
 
-🔧 **API Testing Services:**
-- Generate comprehensive test cases
-- Execute automated API tests
-- Monitor test performance
-- Generate detailed reports
+**2. Essential Test Types**
+- **Unit Tests**: Individual functions/methods
+- **Integration Tests**: API endpoints
+- **End-to-End Tests**: Complete workflows
+- **Performance Tests**: Load and stress testing
+- **Security Tests**: Authentication and authorization
 
-🤖 **AI-Powered Features:**
-- Intelligent test generation
-- Smart debugging assistance
-- Performance optimization tips
-- Security testing guidance
+**3. HTTP Method Testing**
+```yaml
+# GET - Retrieve data
+- name: "GET Resource"
+  request:
+    method: GET
+    url: "/api/resources"
+  expect:
+    status: 200
 
-📊 **Real-time Monitoring:**
-- Live test execution tracking
-- Performance metrics dashboard
-- Error analysis and reporting
-- Success rate monitoring
+# POST - Create data
+- name: "POST Resource"
+  request:
+    method: POST
+    url: "/api/resources"
+    json:
+      name: "New Resource"
+  expect:
+    status: 201
 
-**Quick Actions:**
-1. **Test Generation**: Upload your API spec or describe endpoints
-2. **Test Execution**: Run existing test suites
-3. **Debugging**: Get help with API issues
-4. **Performance**: Analyze response times and throughput
+# PUT - Update data
+- name: "PUT Resource"
+  request:
+    method: PUT
+    url: "/api/resources/123"
+    json:
+      name: "Updated Resource"
+  expect:
+    status: 200
 
-**Sample Commands:**
-- "Generate tests for my user API"
-- "Help me debug a 500 error"
-- "Create performance tests"
-- "Test authentication endpoints"
+# DELETE - Remove data
+- name: "DELETE Resource"
+  request:
+    method: DELETE
+    url: "/api/resources/123"
+  expect:
+    status: 204
+```
 
-**Current Status:**
-- ✅ Test execution engine: Ready
-- ✅ Report generation: Active
-- ✅ Dashboard monitoring: Live
-- ✅ AI model: Qwen3 Coder (OpenRouter)
+**4. Status Code Testing**
+- **2xx Success**: 200, 201, 204
+- **3xx Redirection**: 301, 302, 304
+- **4xx Client Error**: 400, 401, 403, 404, 422
+- **5xx Server Error**: 500, 502, 503
 
-I'm here to help you build robust, reliable APIs! What would you like to work on?"""
+**5. Response Validation**
+```yaml
+- name: "Validate Response Structure"
+  request:
+    method: GET
+    url: "/api/users/123"
+  expect:
+    status: 200
+    json:
+      id: 123
+      name: "string"
+      email: "string"
+      created_at: "string"
+    headers:
+      Content-Type: "application/json"
+      Cache-Control: "string"
+```
+
+**6. Environment Management**
+```yaml
+# Test environments
+development:
+  base_url: "http://localhost:8000"
+  api_key: "dev_key"
+
+staging:
+  base_url: "https://staging-api.example.com"
+  api_key: "staging_key"
+
+production:
+  base_url: "https://api.example.com"
+  api_key: "prod_key"
+```
+
+**7. Test Data Management**
+- Use test databases
+- Create test fixtures
+- Clean up after tests
+- Use unique identifiers
+- Avoid hardcoded values
+
+**8. Continuous Integration**
+```yaml
+# CI/CD pipeline
+- Run tests on every commit
+- Generate test reports
+- Block deployment on failures
+- Monitor test coverage
+- Track performance metrics
+```
+
+**9. API Documentation Testing**
+- Test against OpenAPI specs
+- Validate response schemas
+- Check example data
+- Verify endpoint descriptions
+
+**10. Monitoring and Alerting**
+- Set up health checks
+- Monitor response times
+- Track error rates
+- Alert on failures
+- Log all requests
+
+**11. Best Practices Summary**
+✅ Test all endpoints and methods
+✅ Validate request/response data
+✅ Test error conditions
+✅ Check performance metrics
+✅ Verify security requirements
+✅ Use realistic test data
+✅ Maintain test documentation
+✅ Automate test execution
+
+Need help implementing any of these practices?"""
     
     def _get_fallback_test_template(self, api_spec: str) -> str:
-        """Get fallback test template."""
-        return f"""# API Test Template
+        """Get a fallback test template."""
+        return f"""# Generated Test Template for API
 
-## Test Cases for: {api_spec}
+Based on your API specification, here's a basic test template:
 
-### 1. Basic Functionality Tests
 ```yaml
-- name: "Test basic GET request"
-  method: "GET"
-  url: "/api/endpoint"
-  expected_status: 200
-  validate:
-    - "response contains expected data"
-    - "response time < 1000ms"
+name: "API Test Suite"
+description: "Generated test cases for API endpoints"
+base_url: "https://api.example.com"
+
+tests:
+  - name: "Health Check"
+    request:
+      method: GET
+      url: "/health"
+    expect:
+      status: 200
+      json:
+        status: "healthy"
+
+  - name: "Get Resources"
+    request:
+      method: GET
+      url: "/api/resources"
+    expect:
+      status: 200
+      json:
+        - id: "number"
+          name: "string"
+
+  - name: "Create Resource"
+    request:
+      method: POST
+      url: "/api/resources"
+      json:
+        name: "Test Resource"
+        description: "Generated test data"
+    expect:
+      status: 201
+      json:
+        id: "number"
+        name: "Test Resource"
+
+  - name: "Update Resource"
+    request:
+      method: PUT
+      url: "/api/resources/{{id}}"
+      json:
+        name: "Updated Resource"
+    expect:
+      status: 200
+      json:
+        id: "{{id}}"
+        name: "Updated Resource"
+
+  - name: "Delete Resource"
+    request:
+      method: DELETE
+      url: "/api/resources/{{id}}"
+    expect:
+      status: 204
 ```
 
-### 2. Error Handling Tests
-```yaml
-- name: "Test invalid input"
-  method: "POST"
-  url: "/api/endpoint"
-  body: "{{invalid_data}}"
-  expected_status: 400
-  validate:
-    - "error message is clear"
-```
+**Customize this template based on your specific API endpoints and requirements.**
 
-### 3. Authentication Tests
-```yaml
-- name: "Test without authentication"
-  method: "GET"
-  url: "/api/protected-endpoint"
-  headers: {{}}
-  expected_status: 401
-```
-
-Please customize these templates based on your specific API requirements."""
+API Specification provided:
+{api_spec[:500]}...
+"""
     
     async def reset_system(self) -> str:
         """Reset the AI system."""
-        try:
-            self.conversation_history = []
-            return "✅ AI system reset successfully"
-        except Exception as e:
-            log.error(f"Error resetting system: {e}")
-            return "❌ Failed to reset AI system"
+        self.conversation_history = []
+        return "🔄 AI system reset successfully. Conversation history cleared."
+
+# Global instance
+_enhanced_ai_system = None
 
 def get_enhanced_ai_system() -> EnhancedAISystem:
-    """Get enhanced AI system instance."""
-    return EnhancedAISystem()
+    """Get the global enhanced AI system instance."""
+    global _enhanced_ai_system
+    if _enhanced_ai_system is None:
+        _enhanced_ai_system = EnhancedAISystem()
+    return _enhanced_ai_system
 
+# Test function
 async def test_enhanced_ai_system():
     """Test the enhanced AI system."""
-    system = get_enhanced_ai_system()
-    
-    # Test conversation
-    response = await system.handle_conversation("Hello! Can you help me with API testing?")
-    print(f"Conversation Response: {response}")
-    
-    # Test stats
-    stats = system.get_system_stats()
-    print(f"System Stats: {stats}")
+    ai_system = get_enhanced_ai_system()
+    response = await ai_system.handle_conversation("Hello, test the AI system")
+    print(f"AI Response: {response}")
+    return response
 
 if __name__ == "__main__":
     asyncio.run(test_enhanced_ai_system()) 
