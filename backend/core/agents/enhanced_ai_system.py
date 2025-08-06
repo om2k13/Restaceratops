@@ -12,7 +12,7 @@ import re
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 import httpx
-from openai import OpenAI
+import openai
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,10 +24,11 @@ class OpenRouterAI:
     def __init__(self):
         self.api_key = os.getenv('OPENROUTER_API_KEY', '')
         self.model = "qwen/qwen3-coder:free"
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://openrouter.ai/api/v1"
-        )
+        self.base_url = "https://openrouter.ai/api/v1"
+        
+        # Configure OpenAI client for OpenRouter (older SDK syntax)
+        openai.api_key = self.api_key
+        openai.api_base = self.base_url
 
     async def generate_response(self, messages: List[Dict[str, str]]) -> Optional[str]:
         """Generate AI response using OpenRouter"""
@@ -35,13 +36,14 @@ class OpenRouterAI:
             return None
             
         try:
-            response = self.client.chat.completions.create(
+            # Use the older OpenAI SDK approach
+            completion = openai.ChatCompletion.create(
                 model=self.model,
                 messages=messages,
                 max_tokens=1000,
                 temperature=0.7
             )
-            return response.choices[0].message.content
+            return completion.choices[0].message.content
         except Exception as e:
             print(f"OpenRouter API error: {e}")
             return None

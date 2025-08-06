@@ -1,11 +1,12 @@
-# AWS Lambda optimized dependencies
-fastapi==0.104.1
-mangum==0.17.0  # AWS Lambda adapter for FastAPI
-pydantic==2.5.0
-pydantic-core==2.14.5
+# Core FastAPI dependencies - using ultra-stable versions for Python 3.13
+fastapi==0.88.0
+uvicorn[standard]==0.20.0
 
-# HTTP client
-httpx==0.25.2
+# Data validation - using ultra-stable version
+pydantic==1.10.13
+
+# HTTP client - ultra-stable version
+httpx==0.23.3
 
 # YAML parsing
 pyyaml==6.0.1
@@ -13,16 +14,18 @@ pyyaml==6.0.1
 # File uploads
 python-multipart==0.0.6
 
-# WebSocket support (for Lambda WebSocket API)
-websockets==12.0
+# WebSocket support
+websockets==10.4
 
-# MongoDB driver (we'll switch to DynamoDB)
-boto3==1.34.0  # AWS SDK
-dynamodb-json==1.3.0  # DynamoDB JSON utilities
+# MongoDB driver - ultra-stable versions
+motor==2.5.1
+pymongo==3.12.3
 
-# OpenAI SDK for AI integration
-openai==1.3.7
+# OpenAI SDK for AI integration - ultra-stable version
+openai==0.27.8
 
 # Additional utilities
-python-dotenv==1.0.0
-typing-extensions>=4.8.0 
+python-dotenv==0.21.1
+
+# Ensure compatibility
+typing-extensions>=4.2.0 
