@@ -1,6 +1,6 @@
 # Core FastAPI dependencies - using ultra-stable versions for Python 3.13
-fastapi==0.88.0
-uvicorn[standard]==0.20.0
+fastapi==0.78.0
+uvicorn[standard]==0.18.3
 
 # Data validation - using ultra-stable version
 pydantic==1.10.13
