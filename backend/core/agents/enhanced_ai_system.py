@@ -81,6 +81,15 @@ class OpenRouterAI:
                         continue
                     else:
                         log.error(f"❌ OpenRouter API error: {response.status_code}")
+                        if "User not found" in response.text:
+                            log.error("🔑 API Key issue: User account not found or suspended")
+                            log.error("💡 Please get a new API key from https://openrouter.ai/keys")
+                        elif "quota" in response.text.lower():
+                            log.error("💰 API Key issue: No credits remaining")
+                            log.error("💡 Please add credits to your OpenRouter account")
+                        elif "rate limit" in response.text.lower():
+                            log.error("⏱️ API Key issue: Rate limited")
+                            log.error("💡 Please wait before making more requests")
                         log.error(f"❌ Response body: {response.text}")
                         continue
                         
