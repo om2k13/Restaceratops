@@ -7,63 +7,43 @@ Advanced AI-powered API testing assistance with OpenRouter integration
 import os
 import logging
 import asyncio
+import json
+import re
 from typing import Dict, List, Any, Optional
-import openai
+from datetime import datetime
+import httpx
+from openai import OpenAI
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("restaceratops.enhanced_ai")
 
 class OpenRouterAI:
-    """OpenRouter AI integration for enhanced responses."""
+    """OpenRouter AI integration for enhanced responses"""
     
     def __init__(self):
-        """Initialize OpenRouter AI with Qwen3 model."""
-        # Get API key from environment or use the provided Qwen Turbo key
-        self.api_key = os.getenv("OPENROUTER_API_KEY", "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")
-        # Use the original Qwen model that was working
+        self.api_key = os.getenv('OPENROUTER_API_KEY', '')
         self.model = "qwen/qwen3-coder:free"
-        self.base_url = "https://openrouter.ai/api/v1"
-        
-        # Configure OpenAI client for OpenRouter (older SDK syntax)
-        openai.api_key = self.api_key
-        openai.api_base = self.base_url
-        
-        if self.api_key:
-            log.info(f"✅ OpenRouter AI configured with {self.model}")
-            log.info(f"🔑 API key configured: {self.api_key[:10]}...{self.api_key[-4:]}")
-        else:
-            log.warning("⚠️ No OpenRouter API key found")
-            log.warning("🔧 Set OPENROUTER_API_KEY environment variable to enable real AI")
-    
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url="https://openrouter.ai/api/v1"
+        )
+
     async def generate_response(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        """Generate response using OpenRouter API directly with fallback models."""
+        """Generate AI response using OpenRouter"""
         if not self.api_key:
-            log.warning("⚠️ No OpenRouter API key provided")
             return None
-        
-        try:
-            log.info(f"🤖 Using OpenRouter API with model: {self.model}")
-            log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
             
-            # Use the older OpenAI SDK approach
-            completion = openai.ChatCompletion.create(
+        try:
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=0.7,
                 max_tokens=1000,
-                headers={
-                    "HTTP-Referer": "https://restaceratops.onrender.com",
-                    "X-Title": "Restaceratops API Testing Platform",
-                }
+                temperature=0.7
             )
-            
-            ai_response = completion.choices[0].message.content
-            log.info(f"✅ OpenRouter response generated successfully with {self.model}")
-            return ai_response
-            
+            return response.choices[0].message.content
         except Exception as e:
-            log.error(f"❌ Failed to call OpenRouter API with {self.model}: {e}")
+            print(f"OpenRouter API error: {e}")
             return None
 
 class EnhancedAISystem:

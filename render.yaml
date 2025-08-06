@@ -6,7 +6,7 @@ services:
     pythonVersion: "3.11.7"
     buildCommand: |
       pip install --upgrade pip
-      pip install -r backend/requirements.txt --no-cache-dir
+      pip install --only-binary=all -r backend/requirements.txt --no-cache-dir
     startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
@@ -22,4 +22,4 @@ services:
       paths:
         - backend/**
         - requirements.txt
-        - render.yaml 
+        - runtime.txt 
