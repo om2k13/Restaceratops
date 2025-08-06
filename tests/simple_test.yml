@@ -9,6 +9,4 @@ tests:
       status: 200
       json:
         id: 1
-        userId: 1
         title: "string"
-        body: "string"

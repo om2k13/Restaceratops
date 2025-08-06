@@ -466,9 +466,10 @@ async def run_suite(test_file: str, **kwargs) -> Dict[str, Any]:
         # Check multiple locations for the test file
         possible_paths = [
             Path(test_file),  # Direct path
-            Path("uploads") / test_file,  # Uploaded file
+            Path("backend/tests") / test_file,  # Backend tests directory (most common)
             Path("tests") / test_file,  # Tests directory
-            Path("backend/tests") / test_file,  # Backend tests directory
+            Path("uploads") / test_file,  # Uploaded file
+            Path("backend/tests") / Path(test_file).name,  # Just filename in backend/tests
         ]
         
         path = None
@@ -476,6 +477,15 @@ async def run_suite(test_file: str, **kwargs) -> Dict[str, Any]:
             if possible_path.exists():
                 path = possible_path
                 break
+        
+        if not path:
+            # Try to find the file by name in backend/tests
+            backend_tests_dir = Path("backend/tests")
+            if backend_tests_dir.exists():
+                for test_file_path in backend_tests_dir.glob("*.yml"):
+                    if test_file_path.name == Path(test_file).name:
+                        path = test_file_path
+                        break
         
         if not path:
             raise FileNotFoundError(f"Test file not found: {test_file}. Checked paths: {[str(p) for p in possible_paths]}")
@@ -559,37 +569,57 @@ async def run_suite(test_file: str, **kwargs) -> Dict[str, Any]:
                 if "json" in expect_config and status_passed:
                     try:
                         response_json = response.json()
-                        expected_json = expect_config["json"]
-                        for key, value in expected_json.items():
-                            if key not in response_json or response_json[key] != value:
+                        for key, expected_value in expect_config["json"].items():
+                            if key in response_json:
+                                actual_value = response_json[key]
+                                # Check if expected_value is a type hint
+                                if expected_value == "string" and not isinstance(actual_value, str):
+                                    json_passed = False
+                                    error_message = f"Expected {key} to be string, got {type(actual_value).__name__}"
+                                    break
+                                elif expected_value == "number" and not isinstance(actual_value, (int, float)):
+                                    json_passed = False
+                                    error_message = f"Expected {key} to be number, got {type(actual_value).__name__}"
+                                    break
+                                elif expected_value == "boolean" and not isinstance(actual_value, bool):
+                                    json_passed = False
+                                    error_message = f"Expected {key} to be boolean, got {type(actual_value).__name__}"
+                                    break
+                                elif expected_value != "string" and expected_value != "number" and expected_value != "boolean":
+                                    # Direct value comparison
+                                    if actual_value != expected_value:
+                                        json_passed = False
+                                        error_message = f"Expected {key} to be {expected_value}, got {actual_value}"
+                                        break
+                            else:
                                 json_passed = False
-                                error_message = f"JSON assertion failed for key: {key}"
+                                error_message = f"Expected key '{key}' not found in response"
                                 break
                     except Exception as e:
                         json_passed = False
-                        error_message = f"JSON parsing failed: {str(e)}"
+                        error_message = f"Failed to parse JSON response: {e}"
                 
-                # Determine test result
-                if status_passed and json_passed:
-                    test_status = "passed"
+                # Determine if test passed
+                test_passed = status_passed and json_passed
+                if test_passed:
                     passed_tests += 1
-                else:
-                    test_status = "failed"
                 
+                # Create result
                 result = {
                     "test_name": test_name,
-                    "status": test_status,
+                    "status": "passed" if test_passed else "failed",
                     "response_time": round(response_time, 2),
                     "response_code": response.status_code,
-                    "response_body": response.text[:500],
-                    "error": error_message,
+                    "response_body": response.text[:500],  # Limit response body
+                    "error": error_message if not test_passed else None,
                     "timestamp": datetime.now().isoformat()
                 }
-                
                 results.append(result)
-                log.info(f"Test {test_name}: {test_status}")
+                
+                log.info(f"Test {test_name}: {'PASSED' if test_passed else 'FAILED'}")
                 
             except Exception as e:
+                log.error(f"Test {test_name} failed with exception: {e}")
                 result = {
                     "test_name": test_name,
                     "status": "error",
@@ -600,14 +630,13 @@ async def run_suite(test_file: str, **kwargs) -> Dict[str, Any]:
                     "timestamp": datetime.now().isoformat()
                 }
                 results.append(result)
-                log.error(f"Test {test_name} failed with error: {e}")
         
         # Calculate summary
         success_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
         avg_response_time = (total_response_time / total_tests) if total_tests > 0 else 0
         
         return {
-            "execution_id": str(uuid.uuid4()),
+            "execution_id": f"exec-{int(time.time())}",
             "status": "completed",
             "total_tests": total_tests,
             "passed_tests": passed_tests,
@@ -615,9 +644,22 @@ async def run_suite(test_file: str, **kwargs) -> Dict[str, Any]:
             "success_rate": round(success_rate, 2),
             "avg_response_time": round(avg_response_time, 2),
             "results": results,
+            "test_file": test_file,
             "timestamp": datetime.now().isoformat()
         }
         
     except Exception as e:
         log.error(f"Test execution failed: {e}")
-        raise Exception(f"Test execution failed: {str(e)}")
+        return {
+            "execution_id": f"exec-error-{int(time.time())}",
+            "status": "error",
+            "error": str(e),
+            "total_tests": 0,
+            "passed_tests": 0,
+            "failed_tests": 0,
+            "success_rate": 0,
+            "avg_response_time": 0,
+            "results": [],
+            "test_file": test_file,
+            "timestamp": datetime.now().isoformat()
+        }

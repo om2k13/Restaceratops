@@ -20,7 +20,7 @@ class OpenRouterAI:
     def __init__(self):
         """Initialize OpenRouter AI with Qwen3 Coder model."""
         # Get API key from environment
-        self.api_key = os.getenv("OPENROUTER_API_KEY", "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")
+        self.api_key = os.getenv("OPENROUTER_API_KEY", "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")
         # Use only the free Qwen3 Coder 7B model - proven to work well
         self.model = "qwen/qwen3-coder:7b"
         self.base_url = "https://openrouter.ai/api/v1"
