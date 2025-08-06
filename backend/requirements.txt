@@ -1,12 +1,10 @@
-# Core FastAPI dependencies - using Pydantic 2.x with pre-compiled wheels
+# AWS Lambda optimized dependencies
 fastapi==0.104.1
-uvicorn[standard]==0.24.0
-
-# Data validation - using Pydantic 2.x with pre-compiled wheels
+mangum==0.17.0  # AWS Lambda adapter for FastAPI
 pydantic==2.5.0
 pydantic-core==2.14.5
 
-# HTTP client - compatible version
+# HTTP client
 httpx==0.25.2
 
 # YAML parsing
@@ -15,18 +13,16 @@ pyyaml==6.0.1
 # File uploads
 python-multipart==0.0.6
 
-# WebSocket support
+# WebSocket support (for Lambda WebSocket API)
 websockets==12.0
 
-# MongoDB driver - compatible versions
-motor==3.3.2
-pymongo==4.6.0
+# MongoDB driver (we'll switch to DynamoDB)
+boto3==1.34.0  # AWS SDK
+dynamodb-json==1.3.0  # DynamoDB JSON utilities
 
-# OpenAI SDK for AI integration - compatible version
+# OpenAI SDK for AI integration
 openai==1.3.7
 
 # Additional utilities
 python-dotenv==1.0.0
-
-# Ensure compatibility
 typing-extensions>=4.8.0 

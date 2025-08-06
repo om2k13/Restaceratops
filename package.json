@@ -1,0 +1,27 @@
+{
+  "name": "restaceratops-aws",
+  "version": "1.0.0",
+  "description": "AI-powered API testing platform deployed on AWS",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "deploy:prod": "serverless deploy --stage prod",
+    "remove": "serverless remove",
+    "logs": "serverless logs -f api",
+    "invoke": "serverless invoke -f api",
+    "package": "serverless package"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-python-requirements": "^6.0.0"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "fastapi",
+    "ai",
+    "api-testing"
+  ],
+  "author": "Restaceratops Team",
+  "license": "MIT"
+} 

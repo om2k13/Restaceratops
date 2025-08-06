@@ -1,0 +1,102 @@
+service: restaceratops-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  timeout: 30
+  environment:
+    STAGE: ${self:provider.stage}
+    OPENROUTER_API_KEY: ${env:OPENROUTER_API_KEY}
+    MONGODB_URI: ${env:MONGODB_URI}
+    MONGODB_DB_NAME: ${env:MONGODB_DB_NAME}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/restaceratops-*"
+
+functions:
+  api:
+    handler: backend/lambda_handler.lambda_handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+      - websocket:
+          route: $default
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+    layer:
+      name: python-deps
+      description: Python dependencies for Restaceratops API
+    noDeploy:
+      - coverage
+      - pytest
+      - pytest-cov
+      - black
+      - flake8
+
+resources:
+  Resources:
+    # DynamoDB Tables
+    ChatHistoryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: restaceratops-chat-history-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: timestamp-index
+            KeySchema:
+              - AttributeName: timestamp
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+    TestResultsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: restaceratops-test-results-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: execution_id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: execution_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: timestamp-index
+            KeySchema:
+              - AttributeName: timestamp
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL 
