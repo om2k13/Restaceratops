@@ -1,12 +1,12 @@
-# Core FastAPI dependencies - using stable versions compatible with Pydantic v1
-fastapi==0.95.2
-uvicorn[standard]==0.22.0
+# Core FastAPI dependencies - using stable versions compatible with Python 3.13
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
 
-# Data validation - using older version to avoid Rust compilation
-pydantic==1.10.13
+# Data validation - using version with pre-compiled wheels
+pydantic==2.4.2
 
 # HTTP client - stable version
-httpx==0.24.1
+httpx==0.25.2
 
 # YAML parsing
 pyyaml==6.0.1
@@ -15,17 +15,17 @@ pyyaml==6.0.1
 python-multipart==0.0.6
 
 # WebSocket support
-websockets==11.0.3
+websockets==12.0
 
 # MongoDB driver - using stable version
-motor==3.1.1
-pymongo==4.3.3
+motor==3.3.2
+pymongo==4.6.0
 
 # OpenAI SDK for AI integration - using compatible version
-openai==0.28.1
+openai==1.3.7
 
 # Additional utilities
 python-dotenv==1.0.0
 
-# Ensure compatibility with older Pydantic
-typing-extensions>=4.5.0 
+# Ensure compatibility
+typing-extensions>=4.8.0 
