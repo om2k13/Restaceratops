@@ -47,8 +47,8 @@ class OpenRouterAI:
         
         try:
             log.info(f"🤖 Using OpenRouter API with model: {self.model}")
-            log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
-            
+                log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
+                
             # Use the new OpenAI SDK approach
             completion = self.client.chat.completions.create(
                 extra_headers={
@@ -64,11 +64,11 @@ class OpenRouterAI:
             
             ai_response = completion.choices[0].message.content
             log.info(f"✅ OpenRouter response generated successfully with {self.model}")
-            return ai_response
-                    
-        except Exception as e:
+                        return ai_response
+                        
+            except Exception as e:
             log.error(f"❌ Failed to call OpenRouter API with {self.model}: {e}")
-            return None
+        return None
 
 class EnhancedAISystem:
     """Enhanced AI system for API testing assistance."""
@@ -83,7 +83,7 @@ class EnhancedAISystem:
         """Handle user conversation with intelligent responses."""
         try:
             # Add user input to conversation history
-            self.conversation_history.append({"role": "user", "content": user_input})
+                self.conversation_history.append({"role": "user", "content": user_input})
             
             # Try to get response from OpenRouter AI
             if self.openrouter_ai.api_key:
@@ -94,7 +94,7 @@ class EnhancedAISystem:
                     return response
             
             # Fallback to intelligent responses if AI fails
-            return self._get_intelligent_fallback_response(user_input)
+                return self._get_intelligent_fallback_response(user_input)
             
         except Exception as e:
             log.error(f"Error in conversation handling: {e}")
@@ -107,11 +107,11 @@ class EnhancedAISystem:
             Generate comprehensive API test cases for the following API specification:
             
             API Specification:
-            {api_spec}
-            
+{api_spec}
+
             Requirements:
-            {requirements}
-            
+{requirements}
+
             Please provide:
             1. Test cases for all endpoints
             2. Positive and negative test scenarios
@@ -121,7 +121,7 @@ class EnhancedAISystem:
             
             Format the response as YAML test specifications.
             """
-            
+
             messages = [
                 {"role": "system", "content": "You are an expert API testing specialist. Generate comprehensive test cases in YAML format."},
                 {"role": "user", "content": prompt}
@@ -132,7 +132,7 @@ class EnhancedAISystem:
                 if response:
                     return response
             
-            return self._get_fallback_test_template(api_spec)
+                return self._get_fallback_test_template(api_spec)
             
         except Exception as e:
             log.error(f"Error generating intelligent tests: {e}")
@@ -160,7 +160,7 @@ I can help you with:
 ✅ Test automation and CI/CD integration
 
 What would you like to work on today?"""
-    
+
     def _get_intelligent_fallback_response(self, user_input: str) -> str:
         """Get intelligent fallback response based on user input."""
         user_input_lower = user_input.lower()
@@ -198,7 +198,7 @@ What would you like to work on today?"""
             return self._get_analyze_test_results(user_input)
         
         # General API guidance
-        return self._get_general_api_guidance(user_input)
+            return self._get_general_api_guidance(user_input)
     
     def _get_authentication_guidance(self, user_input: str) -> str:
         """Provide authentication testing guidance."""
@@ -872,7 +872,7 @@ status_codes:
 - Race conditions
 
 **5. Root Cause Analysis**
-```yaml
+   ```yaml
 # Common failure patterns
 - Authentication failures: Check tokens, permissions
 - Validation errors: Verify input data, schemas
@@ -964,14 +964,14 @@ Here's a comprehensive guide to API testing:
 - **Security Tests**: Authentication and authorization
 
 **3. HTTP Method Testing**
-```yaml
+   ```yaml
 # GET - Retrieve data
 - name: "GET Resource"
-  request:
-    method: GET
+     request:
+       method: GET
     url: "/api/resources"
-  expect:
-    status: 200
+     expect:
+       status: 200
 
 # POST - Create data
 - name: "POST Resource"
@@ -1009,13 +1009,13 @@ Here's a comprehensive guide to API testing:
 - **5xx Server Error**: 500, 502, 503
 
 **5. Response Validation**
-```yaml
+   ```yaml
 - name: "Validate Response Structure"
-  request:
-    method: GET
+     request:
+       method: GET
     url: "/api/users/123"
-  expect:
-    status: 200
+     expect:
+       status: 200
     json:
       id: 123
       name: "string"
@@ -1156,7 +1156,7 @@ API Specification provided:
     
     async def reset_system(self) -> str:
         """Reset the AI system."""
-        self.conversation_history = []
+            self.conversation_history = []
         return "🔄 AI system reset successfully. Conversation history cleared."
 
 # Global instance

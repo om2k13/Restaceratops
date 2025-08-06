@@ -52,9 +52,12 @@ VITE_API_BASE_URL=https://your-backend-app.onrender.com
 
 ```yaml
 Name: restaceratops-backend
-Environment: Python 3
-Build Command: pip install -r backend/requirements.txt
-Start Command: cd backend && uvicorn api.main:app --host 0.0.0.0 --port $PORT
+Environment: Python 3.11.7
+Build Command: |
+  pip install --upgrade pip
+  pip install -r backend/requirements.txt --no-cache-dir
+Start Command: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT
+Health Check Path: /health
 Root Directory: backend
 ```
 
@@ -251,3 +254,53 @@ curl https://your-backend.onrender.com/api/health
 ---
 
 **🎉 Congratulations! Your Restaceratops API Testing Platform is now live!** 
+
+---
+
+## 🚨 **Deployment Troubleshooting Guide**
+
+### **Common Render Deployment Failures:**
+
+#### **1. Rust Compilation Errors**
+**Error**: `Read-only file system (os error 30)` during pydantic-core compilation
+**Solution**: Use Pydantic 2.4.2 or earlier (already fixed in requirements.txt)
+
+#### **2. Dependency Conflicts**
+**Error**: Package version conflicts during pip install
+**Solution**: 
+- Use `--no-cache-dir` flag in build command
+- Pin specific versions in requirements.txt
+- Update pip before installing dependencies
+
+#### **3. Python Version Issues**
+**Error**: Incompatible Python version
+**Solution**: Use Python 3.11.7 (specified in runtime.txt)
+
+#### **4. Memory/Timeout Issues**
+**Error**: Build timeout or memory exceeded
+**Solution**:
+- Optimize requirements.txt to include only necessary packages
+- Use build filters to exclude unnecessary files
+- Consider upgrading to paid plan for more resources
+
+#### **5. Environment Variable Issues**
+**Error**: Missing or incorrect environment variables
+**Solution**:
+- Double-check all environment variables are set in Render dashboard
+- Verify MongoDB connection string format
+- Ensure API keys are valid and active
+
+### **Prevention Strategies:**
+
+1. **Test Locally First**: Always test deployment locally before pushing
+2. **Use Stable Versions**: Avoid bleeding-edge package versions
+3. **Monitor Dependencies**: Regularly update and test dependencies
+4. **Backup Configuration**: Keep deployment configs in version control
+5. **Health Checks**: Implement proper health check endpoints
+
+### **Emergency Rollback:**
+If deployment fails, you can:
+1. Revert to previous working commit
+2. Use manual deployment with specific commit
+3. Check logs for specific error messages
+4. Contact Render support if needed 
