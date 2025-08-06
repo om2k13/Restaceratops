@@ -8,7 +8,7 @@ import os
 import logging
 import asyncio
 from typing import Dict, List, Any, Optional
-import openai
+from openai import OpenAI
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,15 +18,18 @@ class OpenRouterAI:
     """OpenRouter AI integration for enhanced responses."""
     
     def __init__(self):
-        """Initialize OpenRouter AI with Qwen3 30B A3B model."""
-        self.api_key = os.getenv("OPENROUTER_API_KEY", "")
-        # Use Qwen3 30B A3B model - free tier
-        self.model = "qwen/qwen3-30b-a3b:free"
+        """Initialize OpenRouter AI with Qwen3 model."""
+        # Get API key from environment or use the provided Qwen Turbo key
+        self.api_key = os.getenv("OPENROUTER_API_KEY", "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")
+        # Use the original Qwen model that was working
+        self.model = "qwen/qwen3-coder:free"
         self.base_url = "https://openrouter.ai/api/v1"
         
-        # Configure OpenAI client for OpenRouter (older SDK syntax)
-        openai.api_key = self.api_key
-        openai.api_base = self.base_url
+        # Initialize OpenAI client for OpenRouter
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key,
+        )
         
         if self.api_key:
             log.info(f"✅ OpenRouter AI configured with {self.model}")
@@ -36,7 +39,7 @@ class OpenRouterAI:
             log.warning("🔧 Set OPENROUTER_API_KEY environment variable to enable real AI")
     
     async def generate_response(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        """Generate response using OpenRouter API with Qwen3 30B A3B model."""
+        """Generate response using OpenRouter API directly with fallback models."""
         if not self.api_key:
             log.warning("⚠️ No OpenRouter API key provided")
             return None
@@ -45,16 +48,17 @@ class OpenRouterAI:
             log.info(f"🤖 Using OpenRouter API with model: {self.model}")
             log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
             
-            # Use the older OpenAI SDK approach
-            completion = openai.ChatCompletion.create(
+            # Use the new OpenAI SDK approach
+            completion = self.client.chat.completions.create(
+                extra_headers={
+                    "HTTP-Referer": "https://restaceratops.onrender.com",
+                    "X-Title": "Restaceratops API Testing Platform",
+                },
+                extra_body={},
                 model=self.model,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=1000,
-                headers={
-                    "HTTP-Referer": "https://restaceratops.onrender.com",
-                    "X-Title": "Restaceratops API Testing Platform",
-                }
+                max_tokens=1000
             )
             
             ai_response = completion.choices[0].message.content
