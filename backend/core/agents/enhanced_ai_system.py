@@ -1,36 +1,32 @@
 #!/usr/bin/env python3
 """
 🦖 Enhanced AI System for Restaceratops
-Uses OpenRouter with Qwen3 30B A3B model for intelligent API testing assistance
+Advanced AI-powered API testing assistance with OpenRouter integration
 """
 
 import os
-import json
 import logging
 import asyncio
-from typing import List, Dict, Optional, Any
-from openai import OpenAI
+from typing import Dict, List, Any, Optional
+import openai
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("agent.enhanced_ai_system")
+log = logging.getLogger("restaceratops.enhanced_ai")
 
 class OpenRouterAI:
-    """OpenRouter AI provider using Qwen3 30B A3B model."""
+    """OpenRouter AI integration for enhanced responses."""
     
     def __init__(self):
         """Initialize OpenRouter AI with Qwen3 30B A3B model."""
-        # Get API key from environment
-        self.api_key = os.getenv("OPENROUTER_API_KEY", "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")
+        self.api_key = os.getenv("OPENROUTER_API_KEY", "")
         # Use Qwen3 30B A3B model - free tier
         self.model = "qwen/qwen3-30b-a3b:free"
         self.base_url = "https://openrouter.ai/api/v1"
         
-        # Initialize OpenAI client for OpenRouter
-        self.client = OpenAI(
-            base_url=self.base_url,
-            api_key=self.api_key,
-        )
+        # Configure OpenAI client for OpenRouter (older SDK syntax)
+        openai.api_key = self.api_key
+        openai.api_base = self.base_url
         
         if self.api_key:
             log.info(f"✅ OpenRouter AI configured with {self.model}")
@@ -47,28 +43,27 @@ class OpenRouterAI:
         
         try:
             log.info(f"🤖 Using OpenRouter API with model: {self.model}")
-                log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
-                
-            # Use the new OpenAI SDK approach
-            completion = self.client.chat.completions.create(
-                extra_headers={
-                    "HTTP-Referer": "https://restaceratops.onrender.com",
-                    "X-Title": "Restaceratops API Testing Platform",
-                },
-                extra_body={},
+            log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
+            
+            # Use the older OpenAI SDK approach
+            completion = openai.ChatCompletion.create(
                 model=self.model,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=1000
+                max_tokens=1000,
+                headers={
+                    "HTTP-Referer": "https://restaceratops.onrender.com",
+                    "X-Title": "Restaceratops API Testing Platform",
+                }
             )
             
             ai_response = completion.choices[0].message.content
             log.info(f"✅ OpenRouter response generated successfully with {self.model}")
-                        return ai_response
-                        
-            except Exception as e:
+            return ai_response
+            
+        except Exception as e:
             log.error(f"❌ Failed to call OpenRouter API with {self.model}: {e}")
-        return None
+            return None
 
 class EnhancedAISystem:
     """Enhanced AI system for API testing assistance."""
@@ -83,7 +78,7 @@ class EnhancedAISystem:
         """Handle user conversation with intelligent responses."""
         try:
             # Add user input to conversation history
-                self.conversation_history.append({"role": "user", "content": user_input})
+            self.conversation_history.append({"role": "user", "content": user_input})
             
             # Try to get response from OpenRouter AI
             if self.openrouter_ai.api_key:
@@ -94,7 +89,7 @@ class EnhancedAISystem:
                     return response
             
             # Fallback to intelligent responses if AI fails
-                return self._get_intelligent_fallback_response(user_input)
+            return self._get_intelligent_fallback_response(user_input)
             
         except Exception as e:
             log.error(f"Error in conversation handling: {e}")
@@ -132,7 +127,7 @@ class EnhancedAISystem:
                 if response:
                     return response
             
-                return self._get_fallback_test_template(api_spec)
+            return self._get_fallback_test_template(api_spec)
             
         except Exception as e:
             log.error(f"Error generating intelligent tests: {e}")
@@ -198,7 +193,7 @@ What would you like to work on today?"""
             return self._get_analyze_test_results(user_input)
         
         # General API guidance
-            return self._get_general_api_guidance(user_input)
+        return self._get_general_api_guidance(user_input)
     
     def _get_authentication_guidance(self, user_input: str) -> str:
         """Provide authentication testing guidance."""
@@ -1156,7 +1151,7 @@ API Specification provided:
     
     async def reset_system(self) -> str:
         """Reset the AI system."""
-            self.conversation_history = []
+        self.conversation_history = []
         return "🔄 AI system reset successfully. Conversation history cleared."
 
 # Global instance

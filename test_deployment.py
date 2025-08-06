@@ -85,9 +85,14 @@ def test_configuration_files():
         with open("backend/requirements.txt", "r") as f:
             requirements = f.read()
             
-        # Check for problematic packages
+        # Check for problematic packages that require Rust compilation
         problematic_packages = [
-            "pydantic>=2.5.0",  # Requires Rust compilation
+            "pydantic>=2.0.0",  # Requires Rust compilation
+            "pydantic==2.0.0",
+            "pydantic==2.1.0",
+            "pydantic==2.2.0",
+            "pydantic==2.3.0",
+            "pydantic==2.4.0",
             "pydantic==2.5.0",
             "pydantic==2.6.0",
             "pydantic==2.7.0"
@@ -97,6 +102,11 @@ def test_configuration_files():
             if package in requirements:
                 print(f"❌ Found problematic package: {package}")
                 return False
+        
+        # Check for correct Pydantic version
+        if "pydantic==1.10.13" not in requirements:
+            print("❌ Pydantic version should be 1.10.13 to avoid Rust compilation")
+            return False
                 
         print("✅ Configuration files are valid")
         return True
@@ -120,6 +130,34 @@ def test_python_version():
         print("❌ Python version may not be compatible (recommended: 3.11+)")
         return False
 
+def test_package_compatibility():
+    """Test package compatibility"""
+    print("🔗 Testing package compatibility...")
+    
+    try:
+        # Test FastAPI and Pydantic compatibility
+        import fastapi
+        import pydantic
+        
+        # Check if we're using compatible versions
+        fastapi_version = fastapi.__version__
+        pydantic_version = pydantic.__version__
+        
+        print(f"FastAPI version: {fastapi_version}")
+        print(f"Pydantic version: {pydantic_version}")
+        
+        # FastAPI 0.95.2 should work with Pydantic 1.10.13
+        if fastapi_version.startswith("0.95") and pydantic_version.startswith("1.10"):
+            print("✅ FastAPI and Pydantic versions are compatible")
+            return True
+        else:
+            print("⚠️ FastAPI and Pydantic versions may have compatibility issues")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error testing package compatibility: {e}")
+        return False
+
 def main():
     """Run all deployment tests"""
     print("🦖 Restaceratops Deployment Test Suite")
@@ -129,7 +167,8 @@ def main():
         test_python_version,
         test_configuration_files,
         test_requirements_installation,
-        test_imports
+        test_imports,
+        test_package_compatibility
     ]
     
     passed = 0
