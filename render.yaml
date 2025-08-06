@@ -16,6 +16,8 @@ services:
         sync: false
       - key: MONGODB_DB_NAME
         value: restaceratops
+      - key: PYTHON_VERSION
+        value: "3.11.7"
     buildFilter:
       paths:
         - backend/**

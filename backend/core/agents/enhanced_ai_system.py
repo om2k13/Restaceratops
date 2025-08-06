@@ -8,7 +8,7 @@ import os
 import logging
 import asyncio
 from typing import Dict, List, Any, Optional
-import openai
+from openai import OpenAI
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,9 +24,11 @@ class OpenRouterAI:
         self.model = "qwen/qwen3-30b-a3b:free"
         self.base_url = "https://openrouter.ai/api/v1"
         
-        # Configure OpenAI client for OpenRouter (older SDK syntax)
-        openai.api_key = self.api_key
-        openai.api_base = self.base_url
+        # Initialize OpenAI client for OpenRouter
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key,
+        )
         
         if self.api_key:
             log.info(f"✅ OpenRouter AI configured with {self.model}")
@@ -45,16 +47,17 @@ class OpenRouterAI:
             log.info(f"🤖 Using OpenRouter API with model: {self.model}")
             log.info(f"📝 Sending {len(messages)} messages to OpenRouter")
             
-            # Use the older OpenAI SDK approach
-            completion = openai.ChatCompletion.create(
+            # Use the new OpenAI SDK approach
+            completion = self.client.chat.completions.create(
+                extra_headers={
+                    "HTTP-Referer": "https://restaceratops.onrender.com",
+                    "X-Title": "Restaceratops API Testing Platform",
+                },
+                extra_body={},
                 model=self.model,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=1000,
-                headers={
-                    "HTTP-Referer": "https://restaceratops.onrender.com",
-                    "X-Title": "Restaceratops API Testing Platform",
-                }
+                max_tokens=1000
             )
             
             ai_response = completion.choices[0].message.content
