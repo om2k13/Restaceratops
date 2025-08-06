@@ -1,12 +1,12 @@
-# Core FastAPI dependencies - using original working versions
-fastapi==0.95.2
-uvicorn[standard]==0.22.0
+# Core FastAPI dependencies - using ultra-stable versions for Python 3.13
+fastapi==0.88.0
+uvicorn[standard]==0.20.0
 
-# Data validation - using version that doesn't require Rust compilation
+# Data validation - using ultra-stable version
 pydantic==1.10.13
 
-# HTTP client - original working version
-httpx==0.24.1
+# HTTP client - ultra-stable version
+httpx==0.23.3
 
 # YAML parsing
 pyyaml==6.0.1
@@ -15,17 +15,17 @@ pyyaml==6.0.1
 python-multipart==0.0.6
 
 # WebSocket support
-websockets==11.0.3
+websockets==10.4
 
-# MongoDB driver - original working versions
-motor==3.1.1
-pymongo==4.3.3
+# MongoDB driver - ultra-stable versions
+motor==2.5.1
+pymongo==3.12.3
 
-# OpenAI SDK for AI integration - original working version
-openai==0.28.1
+# OpenAI SDK for AI integration - ultra-stable version
+openai==0.27.8
 
 # Additional utilities
-python-dotenv==1.0.0
+python-dotenv==0.21.1
 
 # Ensure compatibility
-typing-extensions>=4.5.0 
+typing-extensions>=4.2.0 
