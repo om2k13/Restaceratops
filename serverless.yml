@@ -7,7 +7,7 @@ provider:
   runtime: python3.11
   region: us-east-1
   stage: ${opt:stage, 'dev'}
-  memorySize: 512
+  memorySize: 1024
   timeout: 30
   environment:
     STAGE: ${self:provider.stage}
@@ -33,12 +33,6 @@ functions:
       - httpApi:
           path: /{proxy+}
           method: ANY
-      - websocket:
-          route: $connect
-      - websocket:
-          route: $disconnect
-      - websocket:
-          route: $default
 
 plugins:
   - serverless-python-requirements
@@ -46,15 +40,14 @@ plugins:
 custom:
   pythonRequirements:
     dockerizePip: false
-    layer:
-      name: python-deps
-      description: Python dependencies for Restaceratops API
+    layer: false
     noDeploy:
       - coverage
       - pytest
       - pytest-cov
       - black
       - flake8
+    pythonBin: python3
 
 resources:
   Resources:
